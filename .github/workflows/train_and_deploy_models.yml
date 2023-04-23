@@ -1,0 +1,74 @@
+name: "Train and deploy amazon models"
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_databricks:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Setup env vars
+        id: setup_env_vars
+        run: |
+          echo "GIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+          echo "DATABRICKS_TOKEN=${{ secrets.DATABRICKS_TOKEN }}" >> $GITHUB_ENV
+          echo "DATABRICKS_HOST=${{ secrets.DATABRICKS_HOST }}" >> $GITHUB_ENV
+
+      - name: setup python
+        id: setup_python
+        uses: actions/setup-python@v2
+
+      - name: checkout the project repo
+        id: checkout_repo
+        uses: actions/checkout@v2
+        with:
+          path: "project"
+
+      - name: Build wheel
+        id: build_wheel
+        working-directory: "project"
+        run: |
+          pip install wheel
+          python setup.py bdist_wheel
+
+      - name: Copy files
+        id: setup_git_token
+        run: |
+          pip install databricks-cli
+          dbfs rm dbfs:/upload/amazon_reviews/amazon-reviews-0.0.1-py3-none-any.whl
+          dbfs rm dbfs:/upload/amazon-reviews/train_category_model.py
+          dbfs rm dbfs:/upload/amazon-reviews/deploy_category_model.py
+          dbfs rm dbfs:/upload/amazon-reviews/train_recommender.py
+          dbfs rm dbfs:/upload/amazon-reviews/deploy_recommender.py
+          dbfs cp project/dist/amazon_reviews-0.0.1-py3-none-any.whl dbfs:/upload/amazon_reviews/amazon-reviews-0.0.1-py3-none-any.whl
+          dbfs cp project/category_model/train_category_model.py dbfs:/upload/amazon-reviews/train_category_model.py
+          dbfs cp project/category_model/deploy_category_model.py dbfs:/upload/amazon-reviews/deploy_category_model.py
+          dbfs cp project/recommender/train_recommender.py dbfs:/upload/amazon-reviews/train_recommender.py
+          dbfs cp project/recommender/deploy_recommender.py dbfs:/upload/amazon-reviews/deploy_recommender.py
+
+      - name: Jinja format job deployment
+        id: jinja_format_job_deployment # fill in GIT_SHA and DATABRICKS_HOST
+        run: |
+          pip install jinja2-cli
+          jinja2 -D GIT_SHA="${GIT_SHA}" -D DATABRICKS_HOST="${DATABRICKS_HOST}" project/category_model/category_model.json.j2 > project/category_model/category_model.json
+          jinja2 -D GIT_SHA="${GIT_SHA}" -D DATABRICKS_HOST="${DATABRICKS_HOST}" project/recommender/recommender.json.j2 > project/recommender/recommender.json
+
+      - name: Deploy databricks job
+        id: deploy_databricks_job
+        run: |
+          databricks jobs configure --version=2.1
+          cat_job_id=$(databricks jobs list --output json | jq '.jobs[] | select(.settings.name == "Amazon reviews category model: train and serve") | .job_id')
+          recom_job_id=$(databricks jobs list --output json | jq '.jobs[] | select(.settings.name == "Amazon recommender model: train and serve") | .job_id')
+          if [ -z "$cat_job_id" ]
+          then
+            cat_job_id=$(databricks jobs create --json-file project/category_model/category_model.json | jq .job_id --raw-output)
+          else
+            databricks jobs reset --job-id $cat_job_id --json-file project/category_model/category_model.json
+          fi
+          if [ -z "$recom_job_id" ]
+          then
+            recom_job_id=$(databricks jobs create --json-file project/recommender/recommender.json | jq .job_id --raw-output)
+          else
+            databricks jobs reset --job-id $recom_job_id --json-file project/recommender/recommender.json
+          fi
+          databricks jobs run-now --job-id $cat_job_id
+          databricks jobs run-now --job-id $recom_job_id
