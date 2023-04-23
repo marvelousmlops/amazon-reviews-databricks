@@ -1,0 +1,72 @@
+{
+    "name": "Amazon recommender model: train and serve",
+    "tasks": [
+      {
+        "task_key": "Train_model",
+        "description": "Train a model, and store all artifacts and metrics as MLFlow experiment run",
+        "spark_python_task": {
+          "python_file": "dbfs:/upload/amazon-reviews/train_recommender.py",
+          "parameters": [
+                    "--run_id",
+                    "{{parent_run_id}}",
+                    "--job_id",
+                    "{{job_id}}"
+          ]
+        },
+        "job_cluster_key": "recommender_cluster",
+        "timeout_seconds": 3600,
+        "max_retries": 1,
+        "min_retry_interval_millis": 2000,
+        "retry_on_timeout": false,
+        "libraries": [{"whl": "dbfs:/upload/amazon-reviews/amazon_reviews-0.0.1-py3-none-any.whl"}]
+      },
+      {
+        "task_key": "Deploy_model",
+        "description": "Deploy model",
+        "spark_python_task": {
+          "python_file": "dbfs:/upload/amazon-reviews/deploy_recommender.py",
+          "parameters": [
+                    "--run_id",
+                    "{{parent_run_id}}",
+                    "--job_id",
+                    "{{job_id}}"
+          ]
+        },
+        "depends_on": [
+            {
+                "task_key": "Train_model"
+            }
+        ],
+        "job_cluster_key": "recommender_cluster",
+        "timeout_seconds": 3600,
+        "max_retries": 1,
+        "min_retry_interval_millis": 2000,
+        "retry_on_timeout": false,
+        "libraries": [{"whl": "dbfs:/upload/amazon-reviews/amazon_reviews-0.0.1-py3-none-any.whl"}]
+      }
+    ],
+   "job_clusters": [
+      {
+        "job_cluster_key": "recommender_cluster",
+        "new_cluster": {
+          "spark_version": "12.2.x-cpu-ml-scala2.12",
+          "node_type_id": "Standard_D4s_v5",
+          "spark_conf": {
+            "spark.speculation": true
+          },
+          "azure_attributes": {
+            "availability": "SPOT_WITH_FALLBACK_AZURE"
+          },
+          "autoscale": {
+            "min_workers": 2,
+            "max_workers": 4
+          },
+          "spark_env_vars": {
+          "DATABRICKS_HOST": "{{ DATABRICKS_HOST }}",
+          "DATABRICKS_TOKEN": {{ '"{{secrets/keyvault/DatabricksToken}}"' }},
+          "GIT_SHA": "{{ GIT_SHA }}"
+          }
+        }
+      }
+   ]
+  }
