@@ -5,10 +5,10 @@ setup(
     name="amazon_reviews",
     version="0.0.1",
     packages=find_packages(),
-    url="https://github.com/marvelousmlops.amazon_reviews.git",
+    url="https://github.com/marvelousmlops/amazon-reviews-databricks",
     license="",
     author="Maria Vechtomova",
-    author_email="vechtomova_maria@gmail.com",
+    author_email="marvelousmlops@gmail.com",
     description="Databricks serverless api deployment: amazon reviews public  dataset",
     python_requires=">=3.6"
 )
