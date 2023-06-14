@@ -1,0 +1,30 @@
+build:
+  python: "pip"
+
+environments:
+  default:
+    workflows:
+      - name: "train_and_deploy_category_model"
+        job_clusters:
+          - job_cluster_key: "category_model_cluster"
+            new_cluster:
+              spark_version: "12.2.x-cpu-ml-scala2.12"
+              num_workers: 1
+              node_type_id: "Standard_D4s_v5"
+              spark_env_vars:
+                DATABRICKS_HOST: "{{ env['DATABRICKS_HOST'] }}"
+                DATABRICKS_TOKEN: {{ '"{{secrets/keyvault/DatabricksToken}}"' }}
+                GIT_SHA: "{{ env['GIT_SHA'] }}"
+        tasks:
+          - task_key: "train_model"
+            job_cluster_key: "category_model_cluster"
+            spark_python_task:
+              python_file: "file://category_model/train_category_model.py"
+              parameters: ["--run_id", "{{parent_run_id}}", "--job_id", "{{job_id}}"]
+          - task_key: "deploy_model"
+            job_cluster_key: "category_model_cluster"
+            spark_python_task:
+              python_file: "file://category_model/deploy_category_model.py"
+              parameters: ["--run_id", "{{parent_run_id}}", "--job_id", "{{job_id}}"]
+            depends_on:
+              - task_key: "train_model"

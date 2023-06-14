@@ -1,0 +1,20 @@
+name: "Train and deploy amazon models dbx reusable"
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy_recommender:
+    uses: marvelousmlops/marvelous-workflows/.github/workflows/databricks_job_dbx.yml@v1
+    with:
+      deployment-file: "recommender/dbx_recommender_deployment.yml.j2"
+      toolkit-ref: "v1"
+      run-job-now: "True"
+    secrets: inherit
+
+  deploy_category_model:
+    uses: marvelousmlops/marvelous-workflows/.github/workflows/databricks_job_dbx.yml@v1
+    with:
+      deployment-file: "recommender/dbx_category_model_deployment.yml.j2"
+      toolkit-ref: "v1"
+      run-job-now: "True"
+    secrets: inherit
