@@ -12,7 +12,7 @@ dbfs cp dist/amazon_reviews-0.0.1-py3-none-any.whl dbfs:/upload/amazon_reviews/a
 ```
 
 IMPORTANT: DATABRICKS_HOST value should have format: https://< your workspace >/.
-It must have https:// and also / in the end, for example: https://adb-123456781234.2.azuredatabricks.net/
+It must have https:// and also / in the end.
 
 ## 2. Using Github Actions Workflow (and Databricks on Azure)
 
@@ -28,7 +28,7 @@ import os
 os.environ['DATABRICKS_HOST'] = <DATABRICKS_HOST>
 token = retrieve_databricks_token(client_id='', client_secret='', tenant='')
 ```
-DATABRICKS_HOST value should have format: https://< your workspace >/, for example: https://adb-123456781234.2.azuredatabricks.net/
+DATABRICKS_HOST value should have format: https://< your workspace >/.
 
 ### Step 2: create keyvault backed secret scope and add databricks token to keyvault
 DatabricksToken is referred in line 66 of both category_model.json.j2 and recommender.json.j2 as {{secrets/keyvault/DatabricksToken}}
