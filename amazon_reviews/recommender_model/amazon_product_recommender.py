@@ -5,28 +5,6 @@ import mlflow
 
 
 class AmazonProductRecommenderWrapper(mlflow.pyfunc.PythonModel):
-    def __init__(self, model):
-        """Initializes the model in wrapper.
-        Args:
-            model: an AmazonProductRecommender object.
-        Returns:
-            None
-        """
-        self.model = model
-
-    def predict(self, context, model_input: dict):
-        """Returns the model's prediction based on the model input.
-        Args:
-            model_input: dictionary in format: {'basket': List[str], 'customer_id': str}.
-        Returns:
-            The prediction of the model based on the model input.
-        """
-        model_input = {'customer_id': str(model_input['customer_id']),
-                       'basket': list(model_input['basket'])}
-        return self.model[model_input['basket'][0]]
-
-
-class AmazonProductRecommender:
     """
     Amazon product recommender: recommends list of products based on product id
     Model based collaborative filtering; inspired by:
@@ -64,3 +42,14 @@ class AmazonProductRecommender:
             recom = list(np.array(X.index)[(-correlation_matrix[product_id]).argsort()[1:10]])
             self.model[product] = recom
         return self
+
+    def predict(self, context, model_input: dict):
+        """Returns the model's prediction based on the model input.
+        Args:
+            model_input: dictionary in format: {'basket': List[str], 'customer_id': str}.
+        Returns:
+            The prediction of the model based on the model input.
+        """
+        model_input = {'customer_id': str(model_input['customer_id']),
+                       'basket': list(model_input['basket'])}
+        return self.model[model_input['basket'][0]]
